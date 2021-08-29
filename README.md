@@ -10,7 +10,7 @@ Ciel-Layman allows a user to apply user-defiend patches to the TREE, before Ciel
 
 An overlay is a git repository which contains patches for packages.
 
-A user maintains a mappting table from PackageName to Array\<Overlay>. For each Overlay being enabled on a Package, its patches for the package are applied into the TREE.
+A user maintains a mapping table from PackageName to Array\<Overlay>. For each Overlay being enabled on a Package, its patches for the package are applied into the TREE.
 
 Ciel-Layman maintains an internal list of overlays. The user may maintain a separate list of alternative overlays.
 
