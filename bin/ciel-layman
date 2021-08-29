@@ -1,9 +1,19 @@
 #!/bin/bash
 
 ###################################
-# Variable initialization
+# Initialization
 ###################################
+if [[ "$DEBUG" == "y" ]]; then
+    FSPREFIX="$PWD/example-fs"
+fi
+
+### Constants & Variables
 VAR_VERSION="0.1.0-pre1"
+DISTRO_LISTJSONPATH="${FSPREFIX}/etc/ciel-layman/distro-overlays-dict.json"
+DISTRO_LISTJSONTEXT="$(cat $DISTRO_LISTJSONPATH)"
+
+
+
 
 ###################################
 # Detect dependencies
@@ -16,53 +26,60 @@ for MYDEP in jq; do
 done
 # echo "[INFO] Dependencies are satisfied. Good."
 
+
+
+
 ###################################
 # Lib functions
 ###################################
+function _getOverlayAttr() {
+    OVERLAY_NAME="$1"
+    ATTR="$2"
+    RESULT="$(echo $DISTRO_LISTJSONTEXT | jq .$OVERLAY_NAME.$ATTR)"
+    echo "${RESULT//\"/}"
+}
+
+
+
+
 
 ###################################
 # Internal instructions
 ###################################
 function ii_printOverlayDetail() {
     OVERLAY_NAME="$1"
-    OVERLAY_MAINT="$2"
-    OVERLAY_DESC="$3"
-    OVERLAY_HOMEPAGE="$4"
+    MAINTAINERSARR="$(_getOverlayAttr $OVERLAY_NAME maintainers)"
     echo "* $OVERLAY_NAME"
-    echo "    Maintainers:    $OVERLAY_MAINT"
-    echo "    Description:    $OVERLAY_DESC"
-    echo "    Homepage:       $OVERLAY_HOMEPAGE"
+    echo "    Maintainers     ${MAINTAINERSARR//,/ \/ }"
+    echo "    Description     $(_getOverlayAttr $OVERLAY_NAME description)"
+    echo "    Homepage        $(_getOverlayAttr $OVERLAY_NAME homepage)"
     echo ""
 }
+function ii_getDistroOverlays() {
+    cat $FSPREFIX/etc/ciel-layman/distro-overlays
+}
 function ii_getClonedOverlays() {
-    printf "Neruthes example"
+    cat $FSPREFIX/etc/ciel-layman/cloned-overlays
 }
 function ii_syncOverlay() {
-    echo "Syncrhonizing overlay '$1' from '$2'..."
+    echo "Syncrhonizing overlay '$1' from '$(_getOverlayAttr $1 syncUri)'..."
     echo "Done."
     echo ""
 }
+
+
+
+
+
+
+
+
+
 
 ###################################
 # Subcommand implementations
 ###################################
 function sc_help() {
-    # | Subcommand                   | Description                                                                  |
-    # | ---------------------------- | ---------------------------------------------------------------------------- |
-    # | `version`                    | Show this help message.                                                      |
-    # | `help`                       | Print version.                                                               |
-    # | `lsall`                      | Print list of known overlays.                                                |
-    # | `clone REPO1,REPO2`          | Clone selected overlays to local machine.                                    |
-    # | `rm REPO1,REPO2`             | Remove overlays from local machine.                                          |
-    # | `ls`                         | Print list of cloned overlays.                                               |
-    # | `sync`                       | Pull all overlays.                                                           |
-    # | `sync REPO1,REPO2`           | Pull selected overlays, delimited by comma.                                  |
-    # | `which PKG_NAME`             | Get a list of overlays which have patches for a package.                     |
-    # | `use PKG_NAME REPO1,REPO2`   | Register overlays for a package.                                             |
-    # | `unuse PKG_NAME REPO1,REPO2` | Un-register overlays for a package.                                          |
-    # | `perpare PKG_NAME`           | Apply patches for a package from overlays into the TREE.                     |
-    # | `test PKG_NAME`              | Test if there is any conflict for the package among its registered overlays. |
-    # | `stash`                      | Run `git stash` in the TREE.                                                 |
     echo 'Ciel-Layman help'
     echo ''
     echo 'Subcommands:'
@@ -88,24 +105,12 @@ function sc_version() {
     echo "Ciel-Layman version ${VAR_VERSION}"
 }
 function sc_lsall() {
-    # for i in Neruthes prepare nomorebullshit; do
-        # ii_printOverlayDetail $i
-    # done
-    echo ""
-    ii_printOverlayDetail 'Neruthes' \
-        'Neruthes' \
-        'Personal overlay, maintained by Neruthes.' \
-        'https://github.com/neruthes/AOSC-overlay-neruthes'
-    ii_printOverlayDetail 'example' \
-        'AOSC-Developers' \
-        'Example overlay.' \
-        'https://github.com/AOSC-Dev/overlay-example'
-    ii_printOverlayDetail 'sanitize' \
-        'DT In The House' \
-        'Get things sanitized.' \
-        'https://github.com/sanitize/overlay-sanitize'
+    for OVERLAY_NAME in $(ii_getDistroOverlays); do
+        ii_printOverlayDetail {${OVERLAY_NAME}}
+    done
 }
 function sc_clone() {
+    # REPO=$1
     echo "Cloning overlay '$1' into '/var/db/ciel-layman-overlays/$1'..."
     echo "Clone completed."
 }
@@ -114,28 +119,24 @@ function sc_rm() {
     echo "Overlay removed."
 }
 function sc_ls() {
-    echo -e "We have 2 overlays cloned in this machine:\n" >&2
-    ii_printOverlayDetail 'Neruthes' \
-        'Neruthes' \
-        'Personal overlay, maintained by Neruthes.' \
-        'https://github.com/neruthes/AOSC-overlay-neruthes'
-    ii_printOverlayDetail 'example' \
-        'AOSC-Developers' \
-        'Example overlay.' \
-        'https://github.com/AOSC-Dev/overlay-example'
+    for OVERLAY_NAME in $(ii_getClonedOverlays); do
+        ii_printOverlayDetail "${OVERLAY_NAME}"
+    done
 }
 function sc_sync() {
+    # REPOS=$1
     if [[ -z $1 ]]; then
-        echo -e "Starting to synchronize 2 overlays...\n" >&2
-        ii_syncOverlay Neruthes 'https://github.com/neruthes/AOSC-overlay-neruthes'
-        ii_syncOverlay example 'https://github.com/AOSC-Dev/overlay-example'
+        for OVERLAY_NAME in $(ii_getClonedOverlays); do
+            ii_syncOverlay "${OVERLAY_NAME}"
+        done
     else
         echo -e "Starting to synchronize 1 overlays...\n" >&2
-        ii_syncOverlay example 'https://github.com/AOSC-Dev/overlay-example'
+        ii_syncOverlay "$1"
     fi
     echo "All overlays have been synchronized. No error found."
 }
 function sc_which() {
+    # PKGNAME=$1
     echo -e "The following overlays offer patches for '$1':\n" >&2
     echo "'Neruthes' offers 2 patches:"
     echo "    0301-gnupg-bug.patch"
@@ -147,17 +148,20 @@ function sc_which() {
     echo "    0333-cve-2021-102.patch"
 }
 function sc_use() {
+    # PKGNAME=$1 REPOS=$2
     echo "Registered '$2' for package '$1'."
     echo "Currently using overlays for this package:"
     echo "    Neruthes"
     echo "    example"
 }
 function sc_unuse() {
+    # PKGNAME=$1 REPOS=$2
     echo "Un-registered '$2' for package '$1'."
     echo "Currently using overlays for this package:"
     echo "    example"
 }
 function sc_prepare() {
+    # PKGNAME=$1
     echo "Preparing patches for '$1'..."
     echo "Found Ciel workspace at '/var/cielroot-layman'."
     echo "Found Ciel instance at 'ciel-layman-main'."
@@ -183,6 +187,16 @@ function sc_prepare() {
     echo ""
     echo "Good luck!"
 }
+
+
+
+
+
+
+
+
+
+
 
 ###################################
 # Main

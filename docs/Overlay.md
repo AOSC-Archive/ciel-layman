@@ -8,6 +8,10 @@ A user maintains a mappting table from PackageName to Array\<Overlay>. For each 
 
 Ciel-layman maintains an internal list of overlays. The user may maintain a separate list of alternative overlays.
 
+
+
+
+
 ## Maintaining An Overlay
 
 ### Structure
@@ -16,7 +20,7 @@ An overlay repository shall have the following structure:
 
 ```
 example-overlay-repo/
-├── Manifest
+├── Manifest.json
 └── extra-vcs
     └── git
         └── patches
@@ -27,7 +31,7 @@ example-overlay-repo/
 
 A Manifest is a JSON file which contains certain configutations.
 
-```
+```json
 {
     "name": "Neruthes",
     "maintainers": "Neruthes",
@@ -37,3 +41,31 @@ A Manifest is a JSON file which contains certain configutations.
     "description": "Personal overlay, maintained by Neruthes."
 }
 ```
+
+| Field         | Description                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `name`        | The name of this overlay.                                        |
+| `maintainers` | The maintainers of this overlay. A list delimited by comma. |
+| `syncType`    | Now only `git` is supported. Will probably support `rsync`.      |
+| `syncUri`     | The URI for synchronization.                                     |
+| `homepage`    | Where people read README.                                        |
+| `description` | A brief description to explain its reason of existence.          |
+
+
+
+
+
+## Local Files
+
+Ciel-Layman puts all overlays in `/var/db/ciel-layman-overlays`; the overlay name is used as the name (case-sensitive) of the directory.
+
+The user may maintain custom overlays here as well, as long as names do not collide with
+distro-managed ones (names listed in `/etc/ciel-layman/distro-overlays`).
+
+This implies that the user may clone "wild" overlays in `/var/db/ciel-layman-overlays`.
+Ciel-Layman treats "verified" overlays and "wild" overlays equally (in most scenarios).
+Ciel-Layman does not support cloning "wild" overlays, because any user with this need should be skilled enough to manually execute `git clone`.
+
+Ciel-Layman maintains a list of cloned overlays at `/etc/ciel-layman/cloned-overlays`, as a plaintext file with each name in a line.
+To successfully clone an overlay repo, the directory shall not exist, and this list shall not contain its name.
+

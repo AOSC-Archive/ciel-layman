@@ -1,7 +1,0 @@
-{
-    "name": "neruthes",
-    "type": "git",
-    "syncuri": "https://github.com/neruthes/AOSC-overlay-neruthes",
-    "homepage": "https://github.com/neruthes/AOSC-overlay-neruthes",
-    "description": "Personal overlay of Neruthes."
-}

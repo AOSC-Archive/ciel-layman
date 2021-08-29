@@ -24,15 +24,17 @@ For more information, see `docs/Overlay.md`.
 | ---------------------------- | ---------------------------------------------------------------------------- |
 | `help`                       | Print help message.                                                          |
 | `version`                    | Print version.                                                               |
-| `lsall`                      | Print list of known overlays.                                                |
+| `fetch`                      | Fetch the list of known overlays from distro maintainers.                    |
+| `lsall`                      | Print the list of known overlays.                                            |
 | `clone REPO1,REPO2`          | Clone selected overlays to local machine.                                    |
 | `rm REPO1,REPO2`             | Remove overlays from local machine.                                          |
-| `ls`                         | Print list of cloned overlays.                                               |
+| `ls`                         | Print the list of cloned overlays.                                           |
 | `sync`                       | Pull all cloned overlays.                                                    |
 | `sync REPO1,REPO2,REPO3`     | Pull selected overlays, delimited by comma.                                  |
 | `which PKG_NAME`             | Get a list of overlays which have patches for a package.                     |
 | `use PKG_NAME REPO1,REPO2`   | Register overlays for a package.                                             |
 | `unuse PKG_NAME REPO1,REPO2` | Un-register overlays for a package.                                          |
+| `using REPO1`                | Get a list of packages which use an overlay.                                 |
 | `perpare PKG_NAME`           | Apply patches for a package from overlays into the TREE.                     |
 | `test PKG_NAME`              | Test if there is any conflict for the package among its registered overlays. |
 | `stash`                      | Run `git stash` in the TREE.                                                 |
@@ -51,7 +53,39 @@ Ciel-Layman works with the following assumptions:
 
 These assumptions can be removed in future, probably!
 
-### Copyright
+## Filesystem Layout
+
+```
+etc
+`-- ciel-layman
+    |-- cloned-overlays
+    |-- config
+    |-- distro-fetch-list.sh
+    |-- distro-overlays
+    `-- distro-overlays-dict.json
+usr
+`-- local
+    `-- ciel-layman-localrepo
+var
+|-- cielroot-layman
+|   |-- OUTPUT
+|   `-- TREE
+`-- db
+    `-- ciel-layman-overlays
+        `-- Neruthes
+            |-- Manifest.json
+            `-- extra-vcs
+                `-- git
+                    `-- patches
+                        `-- 0003-some-patch.patch
+```
+
+## Future Features
+
+- More synchronization types, e.g. rsync.
+- Support `pre-prepare` hooks and `post-prepare` hooks, which actually modify the `prepare` script.
+
+## Copyright
 
 Copyright (c) 2021 Neruthes.
 
