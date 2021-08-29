@@ -1,0 +1,53 @@
+#!/bin/bash
+
+###################################
+# Detect dependencies
+###################################
+for MYDEP in jq; do
+    if [[ "$(which $MYDEP)" != "/"* ]]; then
+        echo "[ERROR] Dependency $MYDEP is not satisfied. Aborting."
+        exit 1
+    fi
+done
+echo "[INFO] Dependencies are satisfied. Good."
+
+###################################
+# Lib functions
+###################################
+
+###################################
+# Internal instructions
+###################################
+
+
+###################################
+# Subcommand implementations
+###################################
+
+
+###################################
+# Main
+###################################
+case $1 in
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+    hello )
+        echo hello
+        ;;
+esac
