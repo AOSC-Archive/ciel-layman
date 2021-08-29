@@ -22,11 +22,13 @@ For more information, see `docs/Overlay.md`.
 
 | Subcommand                   | Description                                                                  |
 | ---------------------------- | ---------------------------------------------------------------------------- |
+| `help`                       | Print help message.                                                          |
+| `version`                    | Print version.                                                               |
 | `lsall`                      | Print list of known overlays.                                                |
 | `clone REPO1,REPO2`          | Clone selected overlays to local machine.                                    |
 | `rm REPO1,REPO2`             | Remove overlays from local machine.                                          |
 | `ls`                         | Print list of cloned overlays.                                               |
-| `sync`                       | Pull all overlays.                                                           |
+| `sync`                       | Pull all cloned overlays.                                                    |
 | `sync REPO1,REPO2,REPO3`     | Pull selected overlays, delimited by comma.                                  |
 | `which PKG_NAME`             | Get a list of overlays which have patches for a package.                     |
 | `use PKG_NAME REPO1,REPO2`   | Register overlays for a package.                                             |

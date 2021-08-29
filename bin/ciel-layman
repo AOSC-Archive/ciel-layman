@@ -1,6 +1,11 @@
 #!/bin/bash
 
 ###################################
+# Variable initialization
+###################################
+VAR_VERSION="0.1.0-pre1"
+
+###################################
 # Detect dependencies
 ###################################
 for MYDEP in jq; do
@@ -9,7 +14,7 @@ for MYDEP in jq; do
         exit 1
     fi
 done
-echo "[INFO] Dependencies are satisfied. Good."
+# echo "[INFO] Dependencies are satisfied. Good."
 
 ###################################
 # Lib functions
@@ -18,36 +23,176 @@ echo "[INFO] Dependencies are satisfied. Good."
 ###################################
 # Internal instructions
 ###################################
-
+function ii_printOverlayDetail() {
+    OVERLAY_NAME="$1"
+    OVERLAY_MAINT="$2"
+    OVERLAY_DESC="$3"
+    OVERLAY_HOMEPAGE="$4"
+    echo "* $OVERLAY_NAME"
+    echo "    Maintainers:    $OVERLAY_MAINT"
+    echo "    Description:    $OVERLAY_DESC"
+    echo "    Homepage:       $OVERLAY_HOMEPAGE"
+    echo ""
+}
+function ii_getClonedOverlays() {
+    printf "Neruthes example"
+}
+function ii_syncOverlay() {
+    echo "Syncrhonizing overlay '$1' from '$2'..."
+    echo "Done."
+    echo ""
+}
 
 ###################################
 # Subcommand implementations
 ###################################
-
+function sc_help() {
+    # | Subcommand                   | Description                                                                  |
+    # | ---------------------------- | ---------------------------------------------------------------------------- |
+    # | `version`                    | Show this help message.                                                      |
+    # | `help`                       | Print version.                                                               |
+    # | `lsall`                      | Print list of known overlays.                                                |
+    # | `clone REPO1,REPO2`          | Clone selected overlays to local machine.                                    |
+    # | `rm REPO1,REPO2`             | Remove overlays from local machine.                                          |
+    # | `ls`                         | Print list of cloned overlays.                                               |
+    # | `sync`                       | Pull all overlays.                                                           |
+    # | `sync REPO1,REPO2`           | Pull selected overlays, delimited by comma.                                  |
+    # | `which PKG_NAME`             | Get a list of overlays which have patches for a package.                     |
+    # | `use PKG_NAME REPO1,REPO2`   | Register overlays for a package.                                             |
+    # | `unuse PKG_NAME REPO1,REPO2` | Un-register overlays for a package.                                          |
+    # | `perpare PKG_NAME`           | Apply patches for a package from overlays into the TREE.                     |
+    # | `test PKG_NAME`              | Test if there is any conflict for the package among its registered overlays. |
+    # | `stash`                      | Run `git stash` in the TREE.                                                 |
+    echo 'Ciel-Layman help'
+    echo ''
+    echo 'Subcommands:'
+    echo ''
+    echo '    help                  Show this help message.'
+    echo '    version               Print version.'
+    echo '    lsall                 Print list of known overlays.'
+    echo '    clone REPO1,REPO2     Clone selected overlays to local machine.'
+    echo '    rm REPO1,REPO2        Remove overlays from local machine.'
+    echo '    ls                    Print list of cloned overlays.'
+    echo '    sync                  Pull all cloned overlays.'
+    echo '    sync REPO1,REPO2      Pull selected overlays.'
+    echo '    which PKG_NAME        List of overlays which have patches for a package.'
+    echo '    use PKG_NAME REPO1,REPO2      Register overlays for a package.'
+    echo '    unuse PKG_NAME REPO1,REPO2    Un-register overlays for a package.'
+    echo '    perpare PKG_NAME      Test if there is any conflict for the package among'
+    echo '                              its registered overlays.'
+    echo '    perpare PKG_NAME      Apply patches for a package from overlays into the TREE.'
+    echo '    stash                 Run `git stash` in the TREE'
+    echo ''
+}
+function sc_version() {
+    echo "Ciel-Layman version ${VAR_VERSION}"
+}
+function sc_lsall() {
+    # for i in Neruthes prepare nomorebullshit; do
+        # ii_printOverlayDetail $i
+    # done
+    echo ""
+    ii_printOverlayDetail 'Neruthes' \
+        'Neruthes' \
+        'Personal overlay, maintained by Neruthes.' \
+        'https://github.com/neruthes/AOSC-overlay-neruthes'
+    ii_printOverlayDetail 'example' \
+        'AOSC-Developers' \
+        'Example overlay.' \
+        'https://github.com/AOSC-Dev/overlay-example'
+    ii_printOverlayDetail 'sanitize' \
+        'DT In The House' \
+        'Get things sanitized.' \
+        'https://github.com/sanitize/overlay-sanitize'
+}
+function sc_clone() {
+    echo "Cloning overlay '$1' into '/var/db/ciel-layman-overlays/$1'..."
+    echo "Clone completed."
+}
+function sc_rm() {
+    echo "Removing overlay '$1' from '/var/db/ciel-layman-overlays/$1'..."
+    echo "Overlay removed."
+}
+function sc_ls() {
+    echo -e "We have 2 overlays cloned in this machine:\n" >&2
+    ii_printOverlayDetail 'Neruthes' \
+        'Neruthes' \
+        'Personal overlay, maintained by Neruthes.' \
+        'https://github.com/neruthes/AOSC-overlay-neruthes'
+    ii_printOverlayDetail 'example' \
+        'AOSC-Developers' \
+        'Example overlay.' \
+        'https://github.com/AOSC-Dev/overlay-example'
+}
+function sc_sync() {
+    if [[ -z $1 ]]; then
+        echo -e "Starting to synchronize 2 overlays...\n" >&2
+        ii_syncOverlay Neruthes 'https://github.com/neruthes/AOSC-overlay-neruthes'
+        ii_syncOverlay example 'https://github.com/AOSC-Dev/overlay-example'
+    else
+        echo -e "Starting to synchronize 1 overlays...\n" >&2
+        ii_syncOverlay example 'https://github.com/AOSC-Dev/overlay-example'
+    fi
+    echo "All overlays have been synchronized. No error found."
+}
+function sc_which() {
+    echo -e "The following overlays offer patches for '$1':\n" >&2
+    echo "'Neruthes' offers 2 patches:"
+    echo "    0301-gnupg-bug.patch"
+    echo "    0305-cve-2021-003.patch"
+    echo ""
+    echo "'example' offers 3 patches:"
+    echo "    0003-lighttpd-bug.patch"
+    echo "    0305-cve-2020-063.patch"
+    echo "    0333-cve-2021-102.patch"
+}
+function sc_use() {
+    echo "Registered '$2' for package '$1'."
+    echo "Currently using overlays for this package:"
+    echo "    Neruthes"
+    echo "    example"
+}
+function sc_unuse() {
+    echo "Un-registered '$2' for package '$1'."
+    echo "Currently using overlays for this package:"
+    echo "    example"
+}
+function sc_prepare() {
+    echo "Preparing patches for '$1'..."
+    echo "Found Ciel workspace at '/var/cielroot-layman'."
+    echo "Found Ciel instance at 'ciel-layman-main'."
+    echo "Using 2 overlays for '$1':"
+    echo "    Neruthes"
+    echo "    example"
+    echo ""
+    echo "Git repo clean; no need to stash."
+    echo "Applying patches..."
+    echo "    0301-gnupg-bug.patch"
+    echo "    0305-cve-2021-003.patch"
+    echo "    0003-lighttpd-bug.patch"
+    echo "    0305-cve-2020-063.patch"
+    echo "    0333-cve-2021-102.patch"
+    echo ""
+    echo "Applied 5 patches; no conflict found."
+    echo ""
+    echo "Successfully prepard patches. No error found."
+    echo ""
+    echo "Now you may safely build the package with:"
+    echo ""
+    echo "    cd /var/cielroot-layman && ciel build -i ciel-layman-main $1"
+    echo ""
+    echo "Good luck!"
+}
 
 ###################################
 # Main
 ###################################
+
 case $1 in
-    hello )
-        echo hello
+    help|version|lsall|clone|rm|ls|sync|which|use|unuse|prepare )
+        sc_$1 $2 $3 $4 $5 $6
         ;;
-    hello )
-        echo hello
-        ;;
-    hello )
-        echo hello
-        ;;
-    hello )
-        echo hello
-        ;;
-    hello )
-        echo hello
-        ;;
-    hello )
-        echo hello
-        ;;
-    hello )
-        echo hello
+    * )
+        sc_help
         ;;
 esac
