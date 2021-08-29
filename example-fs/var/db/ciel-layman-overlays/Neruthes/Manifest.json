@@ -1,0 +1,8 @@
+{
+    "name": "Neruthes",
+    "maintainers": "Neruthes",
+    "syncType": "git",
+    "syncUri": "https://github.com/neruthes/AOSC-overlay-neruthes",
+    "homepage": "https://github.com/neruthes/AOSC-overlay-neruthes",
+    "description": "Personal overlay, maintained by Neruthes."
+}

@@ -1,0 +1,26 @@
+{
+    "Neruthes": {
+        "name": "Neruthes",
+        "maintainers": "Neruthes,Mingcong Bai,Catten Linger",
+        "syncType": "git",
+        "syncUri": "https://github.com/neruthes/AOSC-overlay-neruthes",
+        "homepage": "https://github.com/neruthes/AOSC-overlay-neruthes",
+        "description": "Personal overlay, maintained by Neruthes."
+    },
+    "example": {
+        "name": "example",
+        "maintainers": "AOSC-Developers",
+        "syncType": "git",
+        "syncUri": "https://github.com/AOSC-Dev/overlay-example",
+        "homepage": "https://github.com/AOSC-Dev/overlay-example",
+        "description": "Example overlay."
+    },
+    "sanitize": {
+        "name": "sanitize",
+        "maintainers": "DT In The House",
+        "syncType": "git",
+        "syncUri": "https://github.com/sanitize/overlay-sanitize",
+        "homepage": "https://github.com/sanitize/overlay-sanitize",
+        "description": "Get things sanitized."
+    }
+}
