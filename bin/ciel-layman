@@ -3,6 +3,7 @@
 ###################################
 # Initialization
 ###################################
+FSPREFIX=""
 if [[ "$DEBUG" == "y" ]]; then
     FSPREFIX="$PWD/example-fs"
 fi
@@ -46,6 +47,17 @@ function _getOverlayAttr() {
 ###################################
 # Internal instructions
 ###################################
+function __probeConfigFiles() {
+    if [[ $MAKECONF != y ]] && [[ $DEBUG != y ]]; then
+        return 1
+    fi
+    if [[ ! -e $FSPREFIX/etc/ciel-layman ]]; then mkdir -p $FSPREFIX/etc/ciel-layman; else echo "[INFO] Config dir already exists."; fi
+    if [[ ! -e $FSPREFIX/etc/ciel-layman/cloned-overlays ]]; then touch $FSPREFIX/etc/ciel-layman/cloned-overlays; fi
+    if [[ ! -e $FSPREFIX/etc/ciel-layman/distro-overlays ]]; then touch $FSPREFIX/etc/ciel-layman/distro-overlays; fi
+    if [[ ! -e $FSPREFIX/etc/ciel-layman/distro-fetch-list.sh ]]; then touch $FSPREFIX/etc/ciel-layman/distro-fetch-list.sh; fi
+    if [[ ! -e $FSPREFIX/etc/ciel-layman/distro-overlays-dict.json ]]; then touch $FSPREFIX/etc/ciel-layman/distro-overlays-dict.json; fi
+
+}
 function ii_printOverlayDetail() {
     OVERLAY_NAME="$1"
     MAINTAINERSARR="$(_getOverlayAttr $OVERLAY_NAME maintainers)"
