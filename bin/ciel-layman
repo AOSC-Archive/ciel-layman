@@ -34,11 +34,36 @@ done
 # Lib functions
 ###################################
 function _getOverlayAttr() {
-    OVERLAY_NAME="$1"
+    OVERLAYNAME="$1"
     ATTR="$2"
-    RESULT="$(echo $DISTRO_LISTJSONTEXT | jq .$OVERLAY_NAME.$ATTR)"
+    RESULT="$(echo $DISTRO_LISTJSONTEXT | jq .$OVERLAYNAME.$ATTR)"
     echo "${RESULT//\"/}"
 }
+function _getPkgUseList() {
+    LISTPATH_PKG="$FSPREFIX/var/db/ciel-layman/package.use/$1"
+    echo "$(cat $LISTPATH_PKG)"
+}
+function _printFriendlyPkgUseList() {
+    echo "Currently using overlays for this package:"
+    echo ""
+    printf "    "
+    for OVERLAYNAME in $(_getPkgUseList $1); do
+        printf "  $OVERLAYNAME"
+    done
+    echo ""
+}
+function _pkgHasOverlay() {
+    PKGNAME=$1
+    OVERLAYNAME=$2
+    LISTPATH_PKG="$FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME"
+
+    if [[ $(grep ^$OVERLAYNAME\$ $LISTPATH_PKG) == "" ]]; then
+        printf n
+    else
+        printf y
+    fi
+}
+
 
 
 
@@ -47,7 +72,7 @@ function _getOverlayAttr() {
 ###################################
 # Internal instructions
 ###################################
-function __probeConfigFiles() {
+function ii_probeConfigFiles() {
     if [[ $MAKECONF != y ]] && [[ $DEBUG != y ]]; then
         return 1
     fi
@@ -59,12 +84,12 @@ function __probeConfigFiles() {
 
 }
 function ii_printOverlayDetail() {
-    OVERLAY_NAME="$1"
-    MAINTAINERSARR="$(_getOverlayAttr $OVERLAY_NAME maintainers)"
-    echo "* $OVERLAY_NAME"
+    OVERLAYNAME="$1"
+    MAINTAINERSARR="$(_getOverlayAttr $OVERLAYNAME maintainers)"
+    echo "* $OVERLAYNAME"
     echo "    Maintainers     ${MAINTAINERSARR//,/ \/ }"
-    echo "    Description     $(_getOverlayAttr $OVERLAY_NAME description)"
-    echo "    Homepage        $(_getOverlayAttr $OVERLAY_NAME homepage)"
+    echo "    Description     $(_getOverlayAttr $OVERLAYNAME description)"
+    echo "    Homepage        $(_getOverlayAttr $OVERLAYNAME homepage)"
     echo ""
 }
 function ii_getDistroOverlays() {
@@ -76,6 +101,54 @@ function ii_getClonedOverlays() {
 function ii_syncOverlay() {
     echo "Syncrhonizing overlay '$1' from '$(_getOverlayAttr $1 syncUri)'..."
     echo "Done."
+    echo ""
+}
+function ii_probePackageUseFile() {
+    PKGNAME=$1
+    if [[ ! -e $FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME ]]; then
+        mkdir -p $FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
+        rm -r $FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
+        touch $FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
+        echo "[INFO] Created file '$FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME'."
+    fi
+}
+function ii_applyOverlayPatchesToTree() {
+    OVERLAYNAME=$1
+    PKGNAME=$2
+    PATCHESDIR=$FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME/$PKGNAME/patches
+    TARGETDIR=$FSPREFIX/var/cielroot-layman/TREE/$PKGNAME/autobuild/patches
+    # echo "[debug] ii_applyOverlayPatchesToTree"
+    # echo "    PATCHESDIR: $PATCHESDIR"
+    # echo "    TARGETDIR: $TARGETDIR"
+    ### Patches exist?
+    if [[ ! -e $PATCHESDIR ]] || [[ ! -e $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME/$PKGNAME/spec ]]; then
+        echo "[WARNING] Overlay '$OVERLAYNAME' does not have patches for package '$PKGNAME'."
+        return 1
+    fi
+    ### Spec checksum match?
+    OVERLAYSPECSUM="$(sha256sum $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME/$PKGNAME/spec)"
+    TREESPECSUM="$(sha256sum $FSPREFIX/var/cielroot-layman/TREE/$PKGNAME/spec)"
+    if [[ "${OVERLAYSPECSUM:0:64}" != "${TREESPECSUM:0:64}" ]]; then
+        echo "[ERROR] Overlay '$OVERLAYNAME' spec mismatch;"
+        echo "    this overlay is not ready for current version of '$PKGNAME'."
+        echo "    TREE:     $TREESPECSUM"
+        echo "    Overlay:  $OVERLAYSPECSUM"
+        SKIPPED_PATCHES_COUNT=$((SKIPPED_PATCHES_COUNT+1))
+        return 1
+    fi
+    ### Continue working
+    mkdir -p "$TARGETDIR"
+    echo "[INFO] Applying patches from overlay '$OVERLAYNAME'..."
+    for PATCHFILENAME in $(ls $PATCHESDIR); do
+        if [[ -e $TARGETDIR/$PATCHFILENAME ]]; then
+            echo "    (skipped due to name collision) $PATCHFILENAME"
+            SKIPPED_PATCHES_COUNT=$((SKIPPED_PATCHES_COUNT+1))
+        else
+            echo "    $PATCHFILENAME"
+            cp $PATCHESDIR/$PATCHFILENAME $TARGETDIR/
+            APPLIED_PATCHES_COUNT=$((APPLIED_PATCHES_COUNT+1))
+        fi
+    done
     echo ""
 }
 
@@ -96,59 +169,72 @@ function sc_help() {
     echo ''
     echo 'Subcommands:'
     echo ''
-    echo '    help                  Show this help message.'
-    echo '    version               Print version.'
-    echo '    lsall                 Print list of known overlays.'
-    echo '    clone REPO1,REPO2     Clone selected overlays to local machine.'
-    echo '    rm REPO1,REPO2        Remove overlays from local machine.'
-    echo '    ls                    Print list of cloned overlays.'
-    echo '    sync                  Pull all cloned overlays.'
-    echo '    sync REPO1,REPO2      Pull selected overlays.'
-    echo '    which PKG_NAME        List of overlays which have patches for a package.'
-    echo '    use PKG_NAME REPO1,REPO2      Register overlays for a package.'
-    echo '    unuse PKG_NAME REPO1,REPO2    Un-register overlays for a package.'
-    echo '    perpare PKG_NAME      Test if there is any conflict for the package among'
-    echo '                              its registered overlays.'
-    echo '    perpare PKG_NAME      Apply patches for a package from overlays into the TREE.'
-    echo '    stash                 Run `git stash` in the TREE'
+    echo '    help                          Show this help message.'
+    echo '    version                       Print version.'
+    echo '    lsall                         Print list of known overlays.'
+    echo '    clone OVERLAYNAME             Clone selected overlays to local machine.'
+    echo '    rm OVERLAYNAME                Remove overlays from local machine.'
+    echo '    ls                            Print list of cloned overlays.'
+    echo '    sync                          Pull all cloned overlays.'
+    echo '    sync OVERLAYNAME              Pull selected overlays.'
+    echo '    which PKGNAME                 List of overlays which have patches for a package.'
+    echo '    use PKGNAME OVERLAYNAME       Register overlays for a package.'
+    echo '    unuse PKGNAME OVERLAYNAME     Un-register overlays for a package.'
+    echo '    test PKGNAME                  Test if there is any conflict for the package'
+    echo '                                      among its registered overlays.'
+    echo '    perpare PKGNAME               Apply patches for a package from overlays into the TREE.'
+    echo '    stash                         Run `git stash` in the TREE'
     echo ''
 }
 function sc_version() {
     echo "Ciel-Layman version ${VAR_VERSION}"
 }
 function sc_lsall() {
-    for OVERLAY_NAME in $(ii_getDistroOverlays); do
-        ii_printOverlayDetail {${OVERLAY_NAME}}
+    for OVERLAYNAME in $(ii_getDistroOverlays); do
+        ii_printOverlayDetail {${OVERLAYNAME}}
     done
 }
 function sc_clone() {
-    # REPO=$1
+    if [[ -z $1 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    OVERLAYNAME=$1
     echo "Cloning overlay '$1' into '/var/db/ciel-layman-overlays/$1'..."
     echo "Clone completed."
 }
 function sc_rm() {
+    if [[ -z $1 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    OVERLAYNAME=$1
     echo "Removing overlay '$1' from '/var/db/ciel-layman-overlays/$1'..."
     echo "Overlay removed."
 }
 function sc_ls() {
-    for OVERLAY_NAME in $(ii_getClonedOverlays); do
-        ii_printOverlayDetail "${OVERLAY_NAME}"
+    for OVERLAYNAME in $(ii_getClonedOverlays); do
+        ii_printOverlayDetail "${OVERLAYNAME}"
     done
 }
 function sc_sync() {
-    # REPOS=$1
+    OVERLAYNAME=$1
     if [[ -z $1 ]]; then
-        for OVERLAY_NAME in $(ii_getClonedOverlays); do
-            ii_syncOverlay "${OVERLAY_NAME}"
+        for OVERLAYNAME in $(ii_getClonedOverlays); do
+            ii_syncOverlay "${OVERLAYNAME}"
         done
     else
-        echo -e "Starting to synchronize 1 overlays...\n" >&2
+        echo -e "Starting to synchronize 1 overlay...\n" >&2
         ii_syncOverlay "$1"
     fi
     echo "All overlays have been synchronized. No error found."
 }
 function sc_which() {
-    # PKGNAME=$1
+    if [[ -z $1 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    PKGNAME=$1
     echo -e "The following overlays offer patches for '$1':\n" >&2
     echo "'Neruthes' offers 2 patches:"
     echo "    0301-gnupg-bug.patch"
@@ -160,42 +246,97 @@ function sc_which() {
     echo "    0333-cve-2021-102.patch"
 }
 function sc_use() {
-    # PKGNAME=$1 REPOS=$2
-    echo "Registered '$2' for package '$1'."
-    echo "Currently using overlays for this package:"
-    echo "    Neruthes"
-    echo "    example"
+    if [[ -z $2 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    PKGNAME=$1
+    OVERLAYNAME=$2
+    LISTPATH_PKG=$FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
+    ii_probePackageUseFile $PKGNAME
+    if [[ "$(_pkgHasOverlay $PKGNAME $OVERLAYNAME)" == "y" ]]; then
+        echo "[ERROR] Package '$PKGNAME' already uses overlay '$OVERLAYNAME'."
+        _printFriendlyPkgUseList $PKGNAME
+        exit 1
+    fi
+    if [[ ! -e $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME/Manifest.json ]]; then
+        echo "[ERROR] Overlay '$OVERLAYNAME' does not exist."
+        exit 1
+    fi
+
+    echo "$OVERLAYNAME" >> "$LISTPATH_PKG"
+    echo "[INFO] Registered '$OVERLAYNAME' for package '$PKGNAME'."
+    _printFriendlyPkgUseList $PKGNAME
 }
 function sc_unuse() {
-    # PKGNAME=$1 REPOS=$2
-    echo "Un-registered '$2' for package '$1'."
-    echo "Currently using overlays for this package:"
-    echo "    example"
+    PKGNAME=$1
+    OVERLAYNAME=$2
+    LISTPATH_PKG=$FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
+    if [[ -z $2 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    ii_probePackageUseFile $PKGNAME
+    if [[ "$(_pkgHasOverlay $PKGNAME $OVERLAYNAME)" == "n" ]]; then
+        echo "[ERROR] Package '$PKGNAME' is not using overlay '$OVERLAYNAME'."
+        _printFriendlyPkgUseList $PKGNAME
+        exit 1
+    fi
+    grep -v ^$OVERLAYNAME\$ $LISTPATH_PKG > $LISTPATH_PKG.tmp
+    rm $LISTPATH_PKG
+    mv $LISTPATH_PKG.tmp $LISTPATH_PKG
+    echo "[INFO] Un-registered '$OVERLAYNAME' for package '$PKGNAME'."
+    _printFriendlyPkgUseList $PKGNAME
 }
 function sc_prepare() {
-    # PKGNAME=$1
-    echo "Preparing patches for '$1'..."
-    echo "Found Ciel workspace at '/var/cielroot-layman'."
-    echo "Found Ciel instance at 'ciel-layman-main'."
-    echo "Using 2 overlays for '$1':"
-    echo "    Neruthes"
-    echo "    example"
+    if [[ -z $1 ]]; then
+        echo "[ERROR] Insufficient arguments."
+        exit 1
+    fi
+    PKGNAME=$1
+    echo "Preparing patches for '$PKGNAME'..."
+    if [[ -e $FSPREFIX/var/cielroot-layman/TREE/.git ]]; then
+        echo "Found Ciel workspace at '/var/cielroot-layman'."
+    else
+        echo "[ERROR] Cannot find Ciel workspace at '/var/cielroot-layman'."
+        exit 1
+    fi
+    # echo "Found Ciel instance at 'ciel-layman-main'."
+    _printFriendlyPkgUseList $PKGNAME
     echo ""
-    echo "Git repo clean; no need to stash."
-    echo "Applying patches..."
-    echo "    0301-gnupg-bug.patch"
-    echo "    0305-cve-2021-003.patch"
-    echo "    0003-lighttpd-bug.patch"
-    echo "    0305-cve-2020-063.patch"
-    echo "    0333-cve-2021-102.patch"
+    
+
+    ### Check TREE clean or dirty
+    cd $FSPREFIX/var/cielroot-layman/TREE
+    # echo "[debug] git status | grep "
+    # echo "-----------------------------"
+    # git status | grep 'nothing to commit, working tree clean'
+    # echo "-----------------------------"
+    if [[ "$(git status | grep 'nothing to commit, working tree clean')" == *"working tree"* ]]; then
+        echo "[INFO] TREE is clean, good."
+        echo ""
+    else
+        echo "[ERROR] TREE is dirty; please commit or stash first."
+        exit 1
+    fi
+    
+    ### Apply patches
+    export APPLIED_PATCHES_COUNT=0
+    export SKIPPED_PATCHES_COUNT=0
+    for OVERLAYNAME in $(_getPkgUseList $PKGNAME); do
+        ii_applyOverlayPatchesToTree $OVERLAYNAME $PKGNAME
+    done
+
+    
     echo ""
-    echo "Applied 5 patches; no conflict found."
+    echo "Applied $APPLIED_PATCHES_COUNT patches."
+    echo "Skipped $SKIPPED_PATCHES_COUNT patches."
     echo ""
     echo "Successfully prepard patches. No error found."
     echo ""
-    echo "Now you may safely build the package with:"
+    echo "Now you may (probably) safely build the package with:"
     echo ""
-    echo "    cd /var/cielroot-layman && ciel build -i ciel-layman-main $1"
+    echo "    cd /var/cielroot-layman && ciel build -i ciel-layman-main $PKGNAME"
     echo ""
     echo "Good luck!"
 }
@@ -213,9 +354,14 @@ function sc_prepare() {
 ###################################
 # Main
 ###################################
-
+if [[ -z $1 ]]; then
+    sc_help
+    exit 0
+fi
 case $1 in
     help|version|lsall|clone|rm|ls|sync|which|use|unuse|prepare )
+        echo "Welcome to Ciel-Layman ($VAR_VERSION)"
+        echo ""
         sc_$1 $2 $3 $4 $5 $6
         ;;
     * )

@@ -13,7 +13,14 @@ Users are encouraged to edit these files. Post-install scripts may creates these
 
 ### /etc/ciel-layman/config
 
-Basic configuration files
+Basic configuration files.
+
+### /etc/ciel-layman/bypass-version-check
+
+A list of overlay names, delimited by LF.
+
+If an overlay is included in this list, it will not be subject to version matching checks
+when preparing patches for any package.
 
 
 
@@ -27,7 +34,7 @@ Only the distro maintainers should manage these files.
 
 A list of overlay names, delimited by LF.
 
-### /etc/ciel-layman/distro-overlays.json
+### /etc/ciel-layman/distro-overlays-dict.json
 
 A dictionary of overlay specifications.
 

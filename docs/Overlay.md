@@ -19,12 +19,13 @@ Ciel-layman maintains an internal list of overlays. The user may maintain a sepa
 An overlay repository shall have the following structure:
 
 ```
-example-overlay-repo/
-├── Manifest.json
-└── extra-vcs
-    └── git
-        └── patches
-            └── 0003-some-patch.patch
+example-overlay-repo
+|-- Manifest.json
+`-- extra-vcs
+    `-- git
+        |-- patches
+        |   `-- 0003-some-patch.patch
+        `-- spec
 ```
 
 ### Manifest
@@ -52,7 +53,14 @@ A Manifest is a JSON file which contains certain configutations.
 | `description` | A brief description to explain its reason of existence.          |
 
 
+### Spec
 
+Each package should contain the spec, which should be exactly the same with the corresponding spec in the TREE.
+Ciel-Layman checks the sha256sum of the two spec files;
+if the sha256sum results do not match, Ciel-Layman will refuse to apply an overlay to the package when preparing.
+This frees the user from worrying about version mismatch.
+
+The user may bypass this check by putting the overlay name in `/etc/ciel-layman/bypass-version-check`.
 
 
 ## Local Files

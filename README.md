@@ -26,14 +26,14 @@ For more information, see `docs/Overlay.md`.
 | `version`                    | Print version.                                                               |
 | `fetch`                      | Fetch the list of known overlays from distro maintainers.                    |
 | `lsall`                      | Print the list of known overlays.                                            |
-| `clone REPO1,REPO2`          | Clone selected overlays to local machine.                                    |
-| `rm REPO1,REPO2`             | Remove overlays from local machine.                                          |
+| `clone OVERLAYNAME`          | Clone selected overlays to local machine.                                    |
+| `rm OVERLAYNAME`             | Remove overlays from local machine.                                          |
 | `ls`                         | Print the list of cloned overlays.                                           |
 | `sync`                       | Pull all cloned overlays.                                                    |
-| `sync REPO1,REPO2,REPO3`     | Pull selected overlays, delimited by comma.                                  |
+| `sync OVERLAYNAME`           | Pull selected overlays, delimited by comma.                                  |
 | `which PKG_NAME`             | Get a list of overlays which have patches for a package.                     |
-| `use PKG_NAME REPO1,REPO2`   | Register overlays for a package.                                             |
-| `unuse PKG_NAME REPO1,REPO2` | Un-register overlays for a package.                                          |
+| `use PKG_NAME OVERLAYNAME`   | Register overlays for a package.                                             |
+| `unuse PKG_NAME OVERLAYNAME` | Un-register overlays for a package.                                          |
 | `using REPO1`                | Get a list of packages which use an overlay.                                 |
 | `perpare PKG_NAME`           | Apply patches for a package from overlays into the TREE.                     |
 | `test PKG_NAME`              | Test if there is any conflict for the package among its registered overlays. |
