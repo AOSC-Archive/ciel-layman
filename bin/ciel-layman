@@ -36,7 +36,7 @@ done
 function _getOverlayAttr() {
     OVERLAYNAME="$1"
     ATTR="$2"
-    RESULT="$(echo $DISTRO_LISTJSONTEXT | jq .$OVERLAYNAME.$ATTR)"
+    RESULT="$(echo "$DISTRO_LISTJSONTEXT" | jq .$OVERLAYNAME.$ATTR)"
     echo "${RESULT//\"/}"
 }
 function _getPkgUseList() {
@@ -111,6 +111,13 @@ function ii_probePackageUseFile() {
         touch $FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME
         echo "[INFO] Created file '$FSPREFIX/var/db/ciel-layman/package.use/$PKGNAME'."
     fi
+}
+function ii_removeLineFromFile() {
+    LINECONTENT=$1
+    FILEPATH=$2
+    grep -v ^$LINECONTENT\$ $FILEPATH > $FILEPATH.tmp
+    rm $FILEPATH
+    mv $FILEPATH.tmp $FILEPATH
 }
 function ii_applyOverlayPatchesToTree() {
     OVERLAYNAME=$1
@@ -191,7 +198,7 @@ function sc_version() {
 }
 function sc_lsall() {
     for OVERLAYNAME in $(ii_getDistroOverlays); do
-        ii_printOverlayDetail {${OVERLAYNAME}}
+        ii_printOverlayDetail ${OVERLAYNAME}
     done
 }
 function sc_clone() {
@@ -200,8 +207,19 @@ function sc_clone() {
         exit 1
     fi
     OVERLAYNAME=$1
-    echo "Cloning overlay '$1' into '/var/db/ciel-layman-overlays/$1'..."
-    echo "Clone completed."
+    ### Already cloned?
+    if [[ $(grep ^$OVERLAYNAME\$ $FSPREFIX/etc/ciel-layman/cloned-overlays) != "" ]]; then
+        echo "[ERROR] Overlay '$OVERLAYNAME' appears already cloned."
+        echo "Try editing $FSPREFIX/etc/ciel-layman/cloned-overlays manually."
+        echo "And try removing $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME manually."
+        exit 1
+    fi
+    ### Write config and clone
+    echo "$OVERLAYNAME" >> $FSPREFIX/etc/ciel-layman/cloned-overlays
+    OVERLAYREPOURI="$(_getOverlayAttr $OVERLAYNAME syncUri)"
+    echo "Cloning overlay '$OVERLAYNAME'"
+    echo "    $OVERLAYREPOURI"
+    git clone $OVERLAYREPOURI $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME 2>&1
 }
 function sc_rm() {
     if [[ -z $1 ]]; then
@@ -209,7 +227,9 @@ function sc_rm() {
         exit 1
     fi
     OVERLAYNAME=$1
-    echo "Removing overlay '$1' from '/var/db/ciel-layman-overlays/$1'..."
+    echo "Removing overlay '$OVERLAYNAME' from '/var/db/ciel-layman-overlays/$OVERLAYNAME'..."
+    rm -rf $FSPREFIX/var/db/ciel-layman-overlays/$OVERLAYNAME
+    ii_removeLineFromFile $OVERLAYNAME $FSPREFIX/etc/ciel-layman/cloned-overlays
     echo "Overlay removed."
 }
 function sc_ls() {
@@ -236,14 +256,14 @@ function sc_which() {
     fi
     PKGNAME=$1
     echo -e "The following overlays offer patches for '$1':\n" >&2
-    echo "'Neruthes' offers 2 patches:"
-    echo "    0301-gnupg-bug.patch"
-    echo "    0305-cve-2021-003.patch"
-    echo ""
-    echo "'example' offers 3 patches:"
-    echo "    0003-lighttpd-bug.patch"
-    echo "    0305-cve-2020-063.patch"
-    echo "    0333-cve-2021-102.patch"
+    # echo "'Neruthes' offers 2 patches:"
+    # echo "    0301-gnupg-bug.patch"
+    # echo "    0305-cve-2021-003.patch"
+    # echo ""
+    # echo "'example' offers 3 patches:"
+    # echo "    0003-lighttpd-bug.patch"
+    # echo "    0305-cve-2020-063.patch"
+    # echo "    0333-cve-2021-102.patch"
 }
 function sc_use() {
     if [[ -z $2 ]]; then
@@ -282,9 +302,7 @@ function sc_unuse() {
         _printFriendlyPkgUseList $PKGNAME
         exit 1
     fi
-    grep -v ^$OVERLAYNAME\$ $LISTPATH_PKG > $LISTPATH_PKG.tmp
-    rm $LISTPATH_PKG
-    mv $LISTPATH_PKG.tmp $LISTPATH_PKG
+    ii_removeLineFromFile $OVERLAYNAME $LISTPATH_PKG
     echo "[INFO] Un-registered '$OVERLAYNAME' for package '$PKGNAME'."
     _printFriendlyPkgUseList $PKGNAME
 }
